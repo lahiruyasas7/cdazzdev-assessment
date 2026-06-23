@@ -1,0 +1,41 @@
+IGNORE
+# Dependencies
+node_modules/
+ 
+# Build output
+dist/
+build/
+.next/
+out/
+ 
+# Environment files (never commit real secrets)
+.env
+.env.local
+.env.*.local
+!.env.example
+ 
+# Prisma generated client (regenerated via `npx prisma generate`, not checked in)
+apps/api/generated/
+ 
+# Expo / React Native
+apps/mobile/.expo/
+.expo-shared/
+*.jks
+*.p12
+*.key
+*.mobileprovision
+ios/
+android/
+ 
+# Testing / coverage
+coverage/
+ 
+# Logs
+*.log
+npm-debug.log*
+ 
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+ 
