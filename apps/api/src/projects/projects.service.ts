@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ProjectRole } from 'src/generated/prisma/enums';
 import { PrismaService } from 'src/prisma.service';
+import { CreateProjectDto } from './dto/create-project.dto';
 
 @Injectable()
 export class ProjectsService {
@@ -36,5 +37,40 @@ export class ProjectsService {
         updatedAt: project.updatedAt,
       };
     });
+  }
+
+  //create project
+  async create(dto: CreateProjectDto, ownerId: string) {
+    console.log('owner id', ownerId);
+    const project = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.project.create({
+        data: {
+          name: dto.name,
+          description: dto.description,
+          ownerId,
+        },
+      });
+
+      await tx.projectMember.create({
+        data: {
+          projectId: created.id,
+          userId: ownerId,
+          role: ProjectRole.MANAGER,
+        },
+      });
+
+      return created;
+    });
+
+    return {
+      id: project.id,
+      name: project.name,
+      description: project.description,
+      ownerId: project.ownerId,
+      myRole: ProjectRole.MANAGER,
+      memberCount: 1,
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+    };
   }
 }
