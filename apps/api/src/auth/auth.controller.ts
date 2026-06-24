@@ -1,4 +1,11 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import {
   ApiConflictResponse,
@@ -9,8 +16,12 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { LoginUserDto } from './dto/login.dto';
-import { AuthResponseDto } from './dto/auth-response.dto';
+import { AuthResponseDto, RefreshResponseDto } from './dto/auth-response.dto';
 import { RegisterDto } from './dto/register.dto';
+import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
+import { CurrentUser } from './decorators/current-user.decorator';
+import type { JwtPayload } from './types/jwt-payload.type';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -39,5 +50,27 @@ export class AuthController {
   @ApiUnauthorizedResponse({ description: 'Invalid email or password' })
   login(@Body() dto: LoginUserDto): Promise<AuthResponseDto> {
     return this.authService.login(dto);
+  }
+
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtRefreshGuard)
+  @ApiOperation({
+    summary: 'Exchange a valid refresh token for a new access token',
+    description:
+      'The refresh token is sent in the request body (not an Authorization header). Returns only a new accessToken — the refreshToken itself stays valid until its own expiry.',
+  })
+  @ApiOkResponse({
+    description: 'New access token issued',
+    type: RefreshResponseDto,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Refresh token missing, invalid, or expired',
+  })
+  refresh(
+    @Body() _dto: RefreshTokenDto,
+    @CurrentUser() user: JwtPayload,
+  ): Promise<RefreshResponseDto> {
+    return this.authService.refresh(user);
   }
 }
