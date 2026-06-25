@@ -73,4 +73,37 @@ export class ProjectsService {
       updatedAt: project.updatedAt,
     };
   }
+
+  /**
+   * Returns the requesting user's ProjectMember row for a given project,
+   * or null if they have no membership (including if the project
+   * doesn't exist — callers distinguish that separately when needed).
+   *
+   * Exists so TasksService can answer "is this user a manager of THIS
+   * project" without duplicating Prisma query logic for project
+   * membership in two modules.
+   */
+  async getMembership(projectId: string, userId: string) {
+    return this.prisma.projectMember.findUnique({
+      where: { userId_projectId: { userId, projectId } },
+    });
+  }
+
+  /**
+   * "Belongs to" check shared with findAllForUser's definition: owner OR
+   * has a ProjectMember row. Used by TasksService to gate GET .../tasks
+   * and POST .../tasks so non-members can't view or create tasks on a
+   * project just by guessing its id.
+   */
+  async isMemberOrOwner(projectId: string, userId: string): Promise<boolean> {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { ownerId: true },
+    });
+    if (!project) return false;
+    if (project.ownerId === userId) return true;
+
+    const membership = await this.getMembership(projectId, userId);
+    return membership !== null;
+  }
 }
