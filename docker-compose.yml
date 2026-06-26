@@ -1,0 +1,62 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: teamsync
+      POSTGRES_PASSWORD: teamsync
+      POSTGRES_DB: teamsync
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U teamsync -d teamsync"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./apps/api/.env
+    environment:
+      # Inside Docker's network, services reach each other by service
+      # name (postgres), not localhost — this OVERRIDES whatever
+      # DATABASE_URL is set in .env (which should say localhost, for
+      # running the API directly on the host during day-to-day dev).
+      DATABASE_URL: postgresql://teamsync:teamsync@postgres:5432/teamsync?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # migrate deploy: applies committed migrations non-interactively,
+    # safe for a fresh container start (no schema-drift prompts, unlike
+    # `migrate dev`). db seed: idempotent (see prisma/seed.ts) — safe to
+    # run on every `docker compose up`, including on a database that's
+    # already been seeded by a previous run. This intentionally runs
+    # migrate+seed inside the container at startup rather than as a
+    # separate CI step — appropriate for a one-shot "clone and run"
+    # reviewer experience, not how you'd want a production redeploy to
+    # work (there, a failed migration mid-deploy taking down a running
+    # app is a real risk this assessment doesn't have).
+    command: sh -c "npx prisma migrate deploy && npx prisma db seed && npm run start:prod"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3000/api/docs').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s # give migrate+seed time to finish before health-checking
+
+volumes:
+  postgres_data:
