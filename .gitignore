@@ -16,6 +16,7 @@ out/
  
 # Prisma generated client (regenerated via `npx prisma generate`, not checked in)
 apps/api/generated/
+apps/api/src/generated/
  
 # Expo / React Native
 apps/mobile/.expo/
