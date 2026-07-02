@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
@@ -8,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import {
+  ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiOkResponse,
@@ -16,12 +18,17 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { LoginUserDto } from './dto/login.dto';
-import { AuthResponseDto, RefreshResponseDto } from './dto/auth-response.dto';
+import {
+  AuthResponseDto,
+  RefreshResponseDto,
+  UserResponseDto,
+} from './dto/auth-response.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import type { JwtPayload } from './types/jwt-payload.type';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { JwtAccessGuard } from './guards/jwt-access.guard';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -72,5 +79,22 @@ export class AuthController {
     @CurrentUser() user: JwtPayload,
   ): Promise<RefreshResponseDto> {
     return this.authService.refresh(user);
+  }
+
+  @Get('me')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Get the currently authenticated user',
+    description:
+      'Re-fetches the user fresh from the database rather than trusting the access token payload, so a role change since the token was issued is reflected immediately.',
+  })
+  @ApiOkResponse({ description: 'Current user', type: UserResponseDto })
+  @ApiUnauthorizedResponse({
+    description: 'Missing, invalid, or expired access token',
+  })
+  me(@CurrentUser() user: JwtPayload): Promise<UserResponseDto> {
+    return this.authService.getMe(user);
   }
 }

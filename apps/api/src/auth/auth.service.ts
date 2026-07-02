@@ -91,6 +91,34 @@ export class AuthService {
     return { accessToken };
   }
 
+  /**
+   * GET /auth/me — not in the brief's literal endpoint list (2.2 only
+   * specifies register/login/refresh), added because the web app's
+   * session needs a way to restore "who's logged in" after a hard page
+   * refresh without re-prompting for credentials. Re-fetches fresh from
+   * the DB rather than trusting the JWT payload's stale snapshot, so a
+   * role change since the token was issued is reflected immediately —
+   * same reasoning as refresh() re-fetching rather than trusting the
+   * token payload blindly.
+   */
+  async getMe(payload: JwtPayload) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User no longer exists');
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      createdAt: user.createdAt,
+    };
+  }
+
   private signAccessToken(payload: JwtPayload): string {
     return this.jwtService.sign(payload, {
       secret: process.env.JWT_ACCESS_SECRET,
