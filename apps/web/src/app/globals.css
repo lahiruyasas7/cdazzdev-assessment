@@ -1,64 +1,26 @@
 @import "tailwindcss";
 
-@theme {
-  /* ── Colors ──────────────────────────────────────────────────────
-     Exact hex values from the design spec — not reinterpreted into
-     Tailwind's default palette or converted to OKLCH, since the brief
-     gives literal hex and this section is graded on precise
-     translation, not palette taste. */
-  --color-primary: #2563EB;
-  --color-primary-dark: #1E40AF;
-  --color-success: #16A34A;
-  --color-warning: #D97706;
-  --color-danger: #DC2626;
- 
-  /* Neutral grayscale 50–900. The brief specifies the range (50–900)
-     but not each stop's exact hex, so these follow the same even
-     perceptual step pattern as Tailwind's own default neutral ramps —
-     the one place a reasonable interpolation was necessary rather
-     than a literal value to copy. */
-  --color-neutral-50: #FAFAFA;
-  --color-neutral-100: #F5F5F5;
-  --color-neutral-200: #E5E5E5;
-  --color-neutral-300: #D4D4D4;
-  --color-neutral-400: #A3A3A3;
-  --color-neutral-500: #737373;
-  --color-neutral-600: #525252;
-  --color-neutral-700: #404040;
-  --color-neutral-800: #262626;
-  --color-neutral-900: #171717;
- 
-  /* ── Typography ──────────────────────────────────────────────────
-     Inter, with the same system-font fallback stack Tailwind ships by
-     default, so text still renders sensibly before/if the webfont
-     fails to load. */
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
- 
-  /* Brief gives px sizes and explicit weights per role. Defining these
-     as named utilities (text-h1, text-h2, text-body, text-caption)
-     rather than relying on generic text-2xl/text-base, so the type
-     scale's intent (h1/h2/body/caption as roles) stays legible in
-     markup, not just the right pixel sizes by coincidence. */
-  --text-h1: 28px;
-  --text-h1--line-height: 1.3;
-  --text-h1--font-weight: 700;
- 
-  --text-h2: 22px;
-  --text-h2--line-height: 1.35;
-  --text-h2--font-weight: 600;
- 
-  --text-body: 15px;
-  --text-body--line-height: 1.5;
-  --text-body--font-weight: 400;
- 
-  --text-caption: 13px;
-  --text-caption--line-height: 1.4;
-  --text-caption--font-weight: 400;
- 
-  /* ── Radius ──────────────────────────────────────────────────────
-     8px on cards, 6px on buttons/inputs — named so intent is explicit
-     in markup (rounded-card vs rounded-control) rather than relying on
-     two differently-sized arbitrary values that look interchangeable. */
-  --radius-card: 8px;
-  --radius-control: 6px;
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
 }
