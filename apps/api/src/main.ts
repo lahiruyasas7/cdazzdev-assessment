@@ -1,12 +1,14 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { setupSwagger } from 'config/swagger-config/swagger';
 import { ValidationPipe } from '@nestjs/common';
+import { setupSwagger } from './swagger-config/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   const isProd = process.env.NODE_ENV === 'production';
+
+  app.enableCors();
 
   // Global validation pipe — enforces all DTOs automatically
   app.useGlobalPipes(
@@ -27,6 +29,6 @@ async function bootstrap() {
 
   // API prefix
   app.setGlobalPrefix('api/v1');
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 3003);
 }
 bootstrap();
