@@ -8,6 +8,8 @@ async function bootstrap() {
 
   const isProd = process.env.NODE_ENV === 'production';
 
+  app.enableCors();
+
   // Global validation pipe — enforces all DTOs automatically
   app.useGlobalPipes(
     new ValidationPipe({
@@ -27,6 +29,6 @@ async function bootstrap() {
 
   // API prefix
   app.setGlobalPrefix('api/v1');
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 3003);
 }
 bootstrap();
