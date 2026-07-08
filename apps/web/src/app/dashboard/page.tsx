@@ -1,3 +1,4 @@
+// src/app/dashboard/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -5,21 +6,22 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ProjectSidebar } from "@/components/dashboard/project-sidebar";
 import { TaskFilters } from "@/components/dashboard/task-filters";
 import { TaskList } from "@/components/dashboard/task-list";
+import { CreateTaskModal } from "@/components/tasks/create-task-modal";
 import { useProjects } from "@/hooks/use-projects";
 import { useTasks } from "@/hooks/use-tasks";
+import { useAuth } from "@/lib/auth/auth-context";
 import type { Project } from "@/lib/types/project.type";
 import type { TaskQueryParams } from "@/lib/types/task.type";
 
 export default function DashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
 
-  // Selected project driven by URL — survives refresh and is shareable.
   const projectId = searchParams.get("projectId");
 
-  // Task filter state — local, not in URL (URL would work too but adds
-  // complexity the brief doesn't ask for).
   const [taskParams, setTaskParams] = useState<TaskQueryParams>({
     sortBy: "dueDate",
     sortOrder: "asc",
@@ -30,8 +32,7 @@ export default function DashboardPage() {
   const { data: projects } = useProjects();
   const selectedProject = projects?.find((p) => p.id === projectId) ?? null;
 
-  // Auto-select the first project if none is selected yet and projects
-  // have loaded — avoids the user seeing a blank content area on first visit.
+  // Auto-select first project when none is selected.
   useEffect(() => {
     if (!projectId && projects && projects.length > 0) {
       const params = new URLSearchParams(searchParams.toString());
@@ -47,18 +48,22 @@ export default function DashboardPage() {
     refetch: refetchTasks,
   } = useTasks(projectId, taskParams);
 
+  // Can create tasks if user is a global ADMIN, or is a MANAGER on this
+  // specific project. Mirrors TasksService.assertCanManageProject() exactly
+  // so the UI matches what the API will actually allow.
+  const canCreateTask =
+    user?.role === "ADMIN" || selectedProject?.myRole === "MANAGER";
+
   function handleSelectProject(project: Project) {
     const params = new URLSearchParams();
     params.set("projectId", project.id);
     router.push(`/dashboard?${params.toString()}`);
-    // Reset filters when switching projects so old filter state from a
-    // previous project doesn't confusingly carry over.
     setTaskParams({ sortBy: "dueDate", sortOrder: "asc", page: 1, limit: 20 });
   }
 
   return (
     <div className="flex h-screen overflow-hidden bg-neutral-50">
-      {/* ── Desktop sidebar (always visible at tablet+) ── */}
+      {/* Desktop sidebar */}
       <div className="hidden w-64 shrink-0 border-r border-neutral-200 tablet:block">
         <ProjectSidebar
           selectedProjectId={projectId}
@@ -66,7 +71,7 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* ── Mobile drawer backdrop ── */}
+      {/* Mobile backdrop */}
       {isSidebarOpen && (
         <div
           className="fixed inset-0 z-20 bg-neutral-900/50 tablet:hidden"
@@ -75,9 +80,9 @@ export default function DashboardPage() {
         />
       )}
 
-      {/* ── Mobile drawer ── */}
+      {/* Mobile drawer */}
       <div
-        className={`fixed inset-y-0 left-0 z-30 w-72 transform border-r border-neutral-200 transition-transform duration-200 tablet:hidden ${
+        className={`fixed inset-y-0 left-0 z-30 w-72 border-r border-neutral-200 transition-transform duration-200 tablet:hidden ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -88,7 +93,7 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* ── Main content ── */}
+      {/* Main content */}
       <main className="flex flex-1 flex-col overflow-hidden">
         {/* Top bar */}
         <header className="flex items-center gap-3 border-b border-neutral-200 bg-white px-4 py-3 tablet:px-6">
@@ -129,9 +134,32 @@ export default function DashboardPage() {
               <h1 className="text-h2 text-neutral-400">Select a project</h1>
             )}
           </div>
+
+          {/* Add task button — only for eligible users with a project selected */}
+          {selectedProject && canCreateTask && (
+            <button
+              onClick={() => setIsCreateTaskOpen(true)}
+              className="text-body flex shrink-0 items-center gap-2 rounded-control bg-primary px-3 py-2 font-medium text-white transition-colors hover:bg-primary-dark"
+            >
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              <span className="hidden tablet:inline">Add task</span>
+            </button>
+          )}
         </header>
 
-        {/* Filters + task list */}
+        {/* Task content */}
         <div className="flex-1 overflow-y-auto px-4 py-4 tablet:px-6">
           {projectId ? (
             <div className="flex flex-col gap-4">
@@ -156,7 +184,6 @@ export default function DashboardPage() {
               />
             </div>
           ) : (
-            /* No-project-selected state */
             <div className="flex h-full flex-col items-center justify-center text-center">
               <svg
                 className="mb-4 h-12 w-12 text-neutral-300"
@@ -181,6 +208,19 @@ export default function DashboardPage() {
           )}
         </div>
       </main>
+
+      {/* Create task modal — rendered at root level, outside the scrollable area */}
+      {selectedProject && (
+        <CreateTaskModal
+          isOpen={isCreateTaskOpen}
+          projectId={selectedProject.id}
+          onClose={() => setIsCreateTaskOpen(false)}
+          onSuccess={() => {
+            // Task list auto-refreshes via React Query invalidation in
+            // useCreateTask — nothing extra needed here.
+          }}
+        />
+      )}
     </div>
   );
 }
